@@ -1,0 +1,1 @@
+gcc HPBubbleScreensaver.cpp -mwindows -mconsole -o HPBubbleScreensaver.exe
