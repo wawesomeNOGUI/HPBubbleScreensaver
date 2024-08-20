@@ -4,12 +4,12 @@
 
 #include <windows.h>
 #include <stdio.h>
+#include <math.h>
 #include <time.h>
 
 const COLORREF TRANSPARENT_COLOR = RGB(0, 0, 0);
 const COLORREF BACKGROUND_COLOR = RGB(1, 1, 1);
 const int TIME_TILL_IDLE = 10000; // time in milliseconds
-const int NUMBER_OF_BUBBLES = 50;
 
 HANDLE idleCheckHandle;
 
@@ -18,22 +18,26 @@ int monitorWidth, monitorHeight;
 HDC hMyDC;
 
 //=======================Bubble Stuff=====================
+const int NUMBER_OF_BUBBLES = 10;
+const int BUBBLE_RADIUS = 50;
+
 struct BUBBLE {
-    float x,
-    float y,
-    float r,
-    float xVel,
-    float yVel,
-    float mass,
-    bool doGrav,
-    bool static,
+    float x;
+    float y;
+    float r;
+    float xVel;
+    float yVel;
+    float mass;
+    bool doGrav;
 };
 
 BUBBLE bubbles[NUMBER_OF_BUBBLES];
 
-// void makeBubble(BUBBLE* bubble);
+void initializeBubbles(); // populates bubbles array
 void wallCheck(BUBBLE* b);
 void collisionCheck(BUBBLE* b);
+void bubbleUpdate(BUBBLE* b);
+void DrawBubbles();
 //======================================================
 
 // Function prototypes (forward declarations)
@@ -195,7 +199,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             GetClientRect(hwnd, &rect);
             FillRect(hMyDC, &rect, CreateSolidBrush(BACKGROUND_COLOR));
 
-            DrawAscii();
+            DrawBubbles();
 
             EndPaint(hwnd, &ps); 
 
@@ -211,38 +215,44 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-// // pass the bubbles array to here to populate it with random
-// void makeBubbles(BUBBLE* bubble)
-// {
+// populates bubbles array
+void initializeBubbles()
+{
+    for (int i = 0; i < NUMBER_OF_BUBBLES; i++)
+    {
+        bubbles[i].r = BUBBLE_RADIUS;
+    }
+}
 
-// }
 const float friction = 1; // no energy loss if == 1
+// checks if bubble hitting wall
 void wallCheck(BUBBLE* b) {
     // bottom & top
-    if (b.y + b.r > myHeight) {
-        b.y = myHeight - b.r;
-        b.xVel *= friction;
-        b.yVel *= -1 * friction;        
-    } else if (b.y - b.r < 0) {
-        b.y = b.r;
-        b.xVel *= friction;
-        b.yVel *= -1 * friction;
+    if (b->y + b->r > myHeight) {
+        b->y = myHeight - b->r;
+        b->xVel *= friction;
+        b->yVel *= -1 * friction;        
+    } else if (b->y - b->r < 0) {
+        b->y = b->r;
+        b->xVel *= friction;
+        b->yVel *= -1 * friction;
     }
 
     // sides
-    if (b.x + b.r > myWidth) {
-        b.x = myWidth - b.r;
-        b.xVel *= -1 * friction;
-        b.yVel *= friction;
-    } else if (b.x - b.r < 0) {
-        b.x = b.r;
-        b.xVel *= -1 * friction;
-        b.yVel *= friction;
+    if (b->x + b->r > myWidth) {
+        b->x = myWidth - b->r;
+        b->xVel *= -1 * friction;
+        b->yVel *= friction;
+    } else if (b->x - b->r < 0) {
+        b->x = b->r;
+        b->xVel *= -1 * friction;
+        b->yVel *= friction;
     }
 }
 
 const float ballFriction = 1;
 const float ballEnergyTransfer = 0.2;
+// checks if bubble collided with other bubble
 void collisionCheck(BUBBLE* b) {
     for (int i = 0; i < NUMBER_OF_BUBBLES; i++)
     {
@@ -250,15 +260,15 @@ void collisionCheck(BUBBLE* b) {
         if (b == &bubbles[i])
             continue;
 
-        float velLength = sqrt(b->xVel ** 2 + b->yVel ** 2);
+        float velLength = sqrt(pow(b->xVel, 2) + pow(b->yVel, 2));
 
         // first check if close enough to hit
-        if ( sqrt((b->x - bubbles[i].x) ** 2 + (b->y - bubbles[i].y) ** 2) < (b->r + bubbles[i].r + velLength) ) {
+        if ( sqrt(pow((b->x - bubbles[i].x), 2) + pow((b->y - bubbles[i].y), 2)) < (b->r + bubbles[i].r + velLength) ) {
             // find line between balls' centers 
             // this will be the line we reflect the angle of bounce around
             float normX = b->x - bubbles[i].x;
             float normY = b->y - bubbles[i].y;
-            float normMagnitude = sqrt(normX ** 2 + normY ** 2);
+            float normMagnitude = sqrt(pow(normX, 2) + pow(normY,2));
             
             // make normal vector length 1 (normalize vector)
             normX /= normMagnitude;
@@ -289,10 +299,23 @@ void collisionCheck(BUBBLE* b) {
     }
 }
 
-void DrawAscii()
+// run in loop to update each bubble individually in bubbles array
+void bubbleUpdate(BUBBLE* b) {
+    b->x += b->xVel;
+    b->y += b->yVel;
+
+    wallCheck(b);
+    collisionCheck(b);
+}
+
+void DrawBubbles()
 {
     SetTextColor(hMyDC, TRANSPARENT_COLOR);
     SetBkColor(hMyDC, BACKGROUND_COLOR);
+
+    for (int i = 0; i < NUMBER_OF_BUBBLES; i++) {
+        bubbleUpdate(&bubbles[i]);
+    }
 
     int i = 0;
     wchar_t myChar = 'H';
