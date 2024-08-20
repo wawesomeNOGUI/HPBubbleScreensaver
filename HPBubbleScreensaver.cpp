@@ -113,6 +113,7 @@ int main()
     ShowWindow(hwnd, SW_MINIMIZE);
 
     // Run the message and update loop.
+    // https://learn.microsoft.com/en-us/windows/win32/learnwin32/window-messages
     MSG msg = { };
     while (GetMessage(&msg, NULL, 0, 0) > 0)
     {
@@ -179,6 +180,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             DrawAscii();
 
             EndPaint(hwnd, &ps); 
+
+            Sleep(10.5); // thread sleep in milliseconds
+
+            // mark window for redrawing if not minimized
+            if (!IsIconic(hwnd))
+                InvalidateRect(hwnd, NULL, true);
         }
         return 0;
 
