@@ -8,14 +8,33 @@
 
 const COLORREF TRANSPARENT_COLOR = RGB(0, 0, 0);
 const COLORREF BACKGROUND_COLOR = RGB(1, 1, 1);
-
 const int TIME_TILL_IDLE = 10000; // time in milliseconds
+const int NUMBER_OF_BUBBLES = 50;
 
 HANDLE idleCheckHandle;
 
 int myWidth, myHeight;
 int monitorWidth, monitorHeight;
 HDC hMyDC;
+
+//=======================Bubble Stuff=====================
+struct BUBBLE {
+    float x,
+    float y,
+    float r,
+    float xVel,
+    float yVel,
+    float mass,
+    bool doGrav,
+    bool static,
+};
+
+BUBBLE bubbles[NUMBER_OF_BUBBLES];
+
+// void makeBubble(BUBBLE* bubble);
+void wallCheck(BUBBLE* b);
+void collisionCheck(BUBBLE* b);
+//======================================================
 
 // Function prototypes (forward declarations)
 void GetMonitorRealResolution(HMONITOR hmon, int* pixelsWidth, int* pixelsHeight, MONITORINFOEX *info);
@@ -35,7 +54,6 @@ LRESULT CALLBACK KeyboardProc(
   WPARAM wParam,
   LPARAM lParam
 );
-void DrawAscii();
 DWORD WINAPI CheckUserInteractionLoop(LPVOID lpParam);
 
 int main()
@@ -191,6 +209,84 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     }
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+
+// // pass the bubbles array to here to populate it with random
+// void makeBubbles(BUBBLE* bubble)
+// {
+
+// }
+const float friction = 1; // no energy loss if == 1
+void wallCheck(BUBBLE* b) {
+    // bottom & top
+    if (b.y + b.r > myHeight) {
+        b.y = myHeight - b.r;
+        b.xVel *= friction;
+        b.yVel *= -1 * friction;        
+    } else if (b.y - b.r < 0) {
+        b.y = b.r;
+        b.xVel *= friction;
+        b.yVel *= -1 * friction;
+    }
+
+    // sides
+    if (b.x + b.r > myWidth) {
+        b.x = myWidth - b.r;
+        b.xVel *= -1 * friction;
+        b.yVel *= friction;
+    } else if (b.x - b.r < 0) {
+        b.x = b.r;
+        b.xVel *= -1 * friction;
+        b.yVel *= friction;
+    }
+}
+
+const float ballFriction = 1;
+const float ballEnergyTransfer = 0.2;
+void collisionCheck(BUBBLE* b) {
+    for (int i = 0; i < NUMBER_OF_BUBBLES; i++)
+    {
+        // skip self
+        if (b == &bubbles[i])
+            continue;
+
+        float velLength = sqrt(b->xVel ** 2 + b->yVel ** 2);
+
+        // first check if close enough to hit
+        if ( sqrt((b->x - bubbles[i].x) ** 2 + (b->y - bubbles[i].y) ** 2) < (b->r + bubbles[i].r + velLength) ) {
+            // find line between balls' centers 
+            // this will be the line we reflect the angle of bounce around
+            float normX = b->x - bubbles[i].x;
+            float normY = b->y - bubbles[i].y;
+            float normMagnitude = sqrt(normX ** 2 + normY ** 2);
+            
+            // make normal vector length 1 (normalize vector)
+            normX /= normMagnitude;
+            normY /= normMagnitude;
+
+            // reflect velocity vector over normal vector to find new velcoity after bounce
+            float dotProduct = b->xVel * normX + b->yVel * normY;
+            // var ang = Math.acos(dotProduct / velLength);
+
+            // https://math.stackexchange.com/questions/13261/how-to-get-a-reflection-vector
+            // derive by setting angle of current velcoity with normal equal to
+            // angle of new velocity (reflection) with normal and
+            // solve the dot product equation
+            float newXVel = b->xVel - 2 * dotProduct * normX;
+            float newYVel = b->yVel - 2 * dotProduct * normY;
+
+            // move balls to just touching and update velocity
+            b->x += normX * velLength; 
+            b->y += normY * velLength; 
+            
+            b->xVel = newXVel * ballFriction;
+            b->yVel = newYVel * ballFriction;
+
+            // transfer some energy to other ball
+            bubbles[i].xVel -= newXVel * ballFriction * ballEnergyTransfer / bubbles[i].mass;
+            bubbles[i].yVel -= newYVel * ballFriction * ballEnergyTransfer / bubbles[i].mass;
+        }
+    }
 }
 
 void DrawAscii()
