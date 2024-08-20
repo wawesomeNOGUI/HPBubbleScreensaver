@@ -9,7 +9,9 @@
 const COLORREF TRANSPARENT_COLOR = RGB(0, 0, 0);
 const COLORREF BACKGROUND_COLOR = RGB(1, 1, 1);
 
-HANDLE keyCheckHandle;
+const int TIME_TILL_IDLE = 10000; // time in milliseconds
+
+HANDLE idleCheckHandle;
 
 int myWidth, myHeight;
 int monitorWidth, monitorHeight;
@@ -98,7 +100,7 @@ int main()
 	HDC hMyDC = GetDC(hwnd);
     
     // Start keypress/user interaction control thread for getting out of screensaver mode
-    keyCheckHandle = CreateThread(
+    idleCheckHandle = CreateThread(
         NULL,           // default security attributes
         0,              // use default stack size  
         CheckUserInteractionLoop,  // function to run in new thread
@@ -106,6 +108,9 @@ int main()
         0,      // thread runs immediately after creation
         NULL    // pointer to variable to receive thread id
     );
+
+    // begin with the window minimized
+    ShowWindow(hwnd, SW_MINIMIZE);
 
     // Run the message and update loop.
     MSG msg = { };
@@ -157,7 +162,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     case WM_DESTROY:
         {
             printf("Goodbye!");
-            CloseHandle(keyCheckHandle);
+            CloseHandle(idleCheckHandle);
             PostQuitMessage(0);
         }
         return 0;
@@ -216,29 +221,20 @@ DWORD WINAPI CheckUserInteractionLoop(LPVOID lpParam)
         // check last input time
         // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getlastinputinfo
         LASTINPUTINFO plii;
+        plii.cbSize = sizeof(LASTINPUTINFO);
+
         GetLastInputInfo(&plii);
 
-        printf("%d\n", GetTickCount() - plii.dwTime);
+        // printf("%d\n", GetTickCount() - plii.dwTime);
 
         // tick count in milliseconds
         if (idle && GetTickCount() - plii.dwTime < 250)
         {
             ShowWindow(hwnd, SW_MINIMIZE);
             idle = false;
-        } else if (!idle && GetTickCount() - plii.dwTime > 250) {
+        } else if (!idle && GetTickCount() - plii.dwTime > TIME_TILL_IDLE) {
             ShowWindow(hwnd, SW_MAXIMIZE);
             idle = true;
         }
-
-        // // toggle display
-        //     // check if window is minimized (iconic).
-        //     if (IsIconic(hwnd))
-        //     {
-        //         ShowWindow(hwnd, SW_MAXIMIZE);
-        //     }
-        //     else
-        //     {
-        //         ShowWindow(hwnd, SW_MINIMIZE);
-        //     }
     }
 }
