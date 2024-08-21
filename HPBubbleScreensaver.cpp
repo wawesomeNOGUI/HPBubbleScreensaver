@@ -21,7 +21,7 @@ HBITMAP hMyBmp;
 
 //=======================Bubble Stuff=====================
 const int NUMBER_OF_BUBBLES = 10;
-const int BUBBLE_RADIUS = 120;
+int BUBBLE_RADIUS = 120; // default 120 but will scale based on screen size
 
 struct BUBBLE {
     float x;
@@ -148,6 +148,9 @@ int main()
     ShowWindow(hwnd, SW_MINIMIZE);
 
     // initialize bubbles
+    // scale radius based on screen size
+    BUBBLE_RADIUS = (int) myWidth * myHeight / (NUMBER_OF_BUBBLES * 1000);
+    printf("R: %d\n", BUBBLE_RADIUS);
     initializeBubbles();
 
     // Run the message and update loop.
@@ -181,7 +184,7 @@ HWND CreateFullscreenWindow(HMONITOR hmon, HINSTANCE *hInstance, MONITORINFOEX *
     return CreateWindowEx(
     0,
     CLASS_NAME,
-    L"ASCII Screen",
+    L"Bubble Screensaver",
     WS_POPUP | WS_MAXIMIZE | WS_VISIBLE,
     info->rcMonitor.left,
     info->rcMonitor.top,
@@ -215,7 +218,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
             EndPaint(hwnd, &ps); 
 
-            Sleep(10.5); // thread sleep in milliseconds
+            Sleep(33); // thread sleep in milliseconds (33msec is about 30fps)
 
             // mark window for redrawing if not minimized
             if (!IsIconic(hwnd))
@@ -232,8 +235,8 @@ void initializeBubbles()
 {
     for (int i = 0; i < NUMBER_OF_BUBBLES; i++)
     {
-        bubbles[i].x = myWidth/2 + rand() % 500;
-        bubbles[i].y = myHeight/2 + rand() % 500;
+        bubbles[i].x = rand() % myWidth;
+        bubbles[i].y = rand() % myHeight;
         bubbles[i].r = BUBBLE_RADIUS;
         bubbles[i].mass = 10;
         bubbles[i].xVel = 0.5;
