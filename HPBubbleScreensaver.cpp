@@ -16,7 +16,7 @@ HANDLE idleCheckHandle;
 
 int myWidth, myHeight;
 int monitorWidth, monitorHeight;
-HDC hMyDC, hdcMemDC;
+HDC hDesktopDC, hMyDC, hdcMemDC;
 HBITMAP hMyBmp;
 
 //=======================Bubble Stuff=====================
@@ -61,6 +61,9 @@ LRESULT CALLBACK KeyboardProc(
   LPARAM lParam
 );
 DWORD WINAPI CheckUserInteractionLoop(LPVOID lpParam);
+
+// drawing routines
+void DrawBackground();
 
 int main()
 {
@@ -120,8 +123,14 @@ int main()
     // set window to always on top
     SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
+    // set window to not be included in screen capture
+    // WDA_EXCLUDEFROMCAPTURE requires at least win 10
+    SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE); 
+
     // Setup for drawing
+    // https://learn.microsoft.com/en-us/windows/win32/gdi/capturing-an-image
 	hMyDC = GetDC(hwnd);
+    hDesktopDC = GetDC(NULL);
 
     // Create a compatible DC, which is used as a drawing buffer and then BitBlt to the window DC.
     hdcMemDC = CreateCompatibleDC(hMyDC);
@@ -133,6 +142,18 @@ int main()
     // https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createcompatibledc
     hMyBmp = CreateCompatibleBitmap(hMyDC, myWidth, myHeight);
     SelectObject(hdcMemDC, hMyBmp);
+
+    // This is the best stretch mode. (need for stretching screenshot into bubble window??)
+    SetStretchBltMode(hMyDC, HALFTONE);
+    SetStretchBltMode(hdcMemDC, HALFTONE);
+
+    // Select DC_PEN so you can change the color of the pen with
+    // COLORREF SetDCPenColor(HDC hdc, COLORREF color)
+    SelectObject(hdcMemDC, GetStockObject(DC_PEN));
+
+    // Select DC_BRUSH so you can change the brush color from the 
+    // default WHITE_BRUSH to any other color
+    SelectObject(hdcMemDC, GetStockObject(DC_BRUSH));
     
     // Start keypress/user interaction control thread for getting out of screensaver mode
     idleCheckHandle = CreateThread(
@@ -214,6 +235,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             PAINTSTRUCT ps;
             BeginPaint(hwnd, &ps); 
 
+            DrawBackground();
             DrawBubbles();
 
             EndPaint(hwnd, &ps); 
@@ -330,25 +352,36 @@ void bubbleUpdate(BUBBLE* b) {
     collisionCheck(b);
 }
 
+// draws background (either slid color or intersting stuff into hdcMemDC)
+// call before drawing bubbles
+void DrawBackground()
+{
+    // fill background
+    // SetBkColor(hdcMemDC, BACKGROUND_COLOR);
+    // SetDCPenColor(hdcMemDC, BACKGROUND_COLOR);
+    // SetDCBrushColor(hdcMemDC, BACKGROUND_COLOR);
+    // Rectangle(hdcMemDC, 0, 0, myWidth, myHeight);
+
+    // The source DC is the whole screen, and the destination DC is buffer dc (hdcMemDC).
+    if (!StretchBlt(hdcMemDC,
+        0, 0,
+        myWidth*2, myHeight*2,
+        hDesktopDC,
+        0, 0,
+        monitorWidth, monitorHeight,
+        SRCCOPY))
+    {
+        printf("StretchBlt failed.\n");
+        return;
+    }
+}
+
 void DrawBubbles()
 {
     // draw to buffer DC and when done bit blt to window
 
-    // Select DC_PEN so you can change the color of the pen with
-    // COLORREF SetDCPenColor(HDC hdc, COLORREF color)
-    SelectObject(hdcMemDC, GetStockObject(DC_PEN));
-
-    // Select DC_BRUSH so you can change the brush color from the 
-    // default WHITE_BRUSH to any other color
-    SelectObject(hdcMemDC, GetStockObject(DC_BRUSH));
-
-    // fill background
-    // SetBkColor(hdcMemDC, BACKGROUND_COLOR);
-    SetDCBrushColor(hdcMemDC, BACKGROUND_COLOR);
-    Rectangle(hdcMemDC, 0, 0, myWidth, myHeight);
-
     // SetTextColor(hdcMemDC, TRANSPARENT_COLOR);
-    SetDCPenColor(hdcMemDC, GRAY_BRUSH);
+    SetDCPenColor(hdcMemDC, RGB(255, 0, 0));
     SetDCBrushColor(hdcMemDC, TRANSPARENT_COLOR);
 
     for (int i = 0; i < NUMBER_OF_BUBBLES; i++) {
