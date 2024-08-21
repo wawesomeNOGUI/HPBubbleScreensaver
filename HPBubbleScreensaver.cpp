@@ -10,7 +10,7 @@
 
 const COLORREF TRANSPARENT_COLOR = RGB(0, 0, 0);
 const COLORREF BACKGROUND_COLOR = RGB(1, 1, 1);
-const int TIME_TILL_IDLE = 1000; // time in milliseconds
+const int TIME_TILL_IDLE = 10000; // time in milliseconds
 
 HANDLE idleCheckHandle;
 
@@ -373,8 +373,6 @@ void DrawBubbles()
 // only call this function once
 DWORD WINAPI CheckUserInteractionLoop(LPVOID lpParam)
 {
-    bool idle = false;
-
     HWND hwnd = (HWND) lpParam;
 
     while(true)
@@ -391,13 +389,12 @@ DWORD WINAPI CheckUserInteractionLoop(LPVOID lpParam)
         // printf("%d\n", GetTickCount() - plii.dwTime);
 
         // tick count in milliseconds
-        if (idle && GetTickCount() - plii.dwTime < 250)
+        // disable bubbles if window is not minimized and user action recently
+        if (!IsIconic(hwnd) && GetTickCount() - plii.dwTime < 250)
         {
             ShowWindow(hwnd, SW_MINIMIZE);
-            idle = false;
-        } else if (!idle && GetTickCount() - plii.dwTime > TIME_TILL_IDLE) {
+        } else if (IsIconic(hwnd) && GetTickCount() - plii.dwTime > TIME_TILL_IDLE) {
             ShowWindow(hwnd, SW_MAXIMIZE);
-            idle = true;
         }
     }
 }
