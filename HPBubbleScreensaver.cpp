@@ -10,7 +10,7 @@
 
 const COLORREF TRANSPARENT_COLOR = RGB(0, 0, 0);
 const COLORREF BACKGROUND_COLOR = RGB(1, 1, 1);
-const int TIME_TILL_IDLE = 10000; // time in milliseconds
+const int TIME_TILL_IDLE = 2000; // time in milliseconds
 
 HANDLE idleCheckHandle;
 
@@ -235,8 +235,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             PAINTSTRUCT ps;
             BeginPaint(hwnd, &ps); 
 
+            // draw to hdcMemDC buffer device context
             DrawBackground();
-            DrawBubbles();
+            // DrawBubbles();
+
+            // Bit block transfer onto window dc
+            if(!BitBlt(hMyDC, 0, 0, myWidth, myHeight, hdcMemDC, 0, 0, SRCCOPY)) {
+                printf("Oh no");
+            }
 
             EndPaint(hwnd, &ps); 
 
@@ -358,18 +364,18 @@ void DrawBackground()
 {
     // fill background
     // SetBkColor(hdcMemDC, BACKGROUND_COLOR);
-    // SetDCPenColor(hdcMemDC, BACKGROUND_COLOR);
-    // SetDCBrushColor(hdcMemDC, BACKGROUND_COLOR);
-    // Rectangle(hdcMemDC, 0, 0, myWidth, myHeight);
+    SetDCPenColor(hdcMemDC, BACKGROUND_COLOR);
+    SetDCBrushColor(hdcMemDC, RGB(100, 100, 100));
+    Rectangle(hdcMemDC, 0, 0, myWidth, myHeight);
 
     // The source DC is the whole screen, and the destination DC is buffer dc (hdcMemDC).
     if (!StretchBlt(hdcMemDC,
         0, 0,
-        myWidth*2, myHeight*2,
+        myWidth, myHeight,
         hDesktopDC,
         0, 0,
         monitorWidth, monitorHeight,
-        SRCCOPY))
+        MERGECOPY))
     {
         printf("StretchBlt failed.\n");
         return;
@@ -381,7 +387,8 @@ void DrawBubbles()
     // draw to buffer DC and when done bit blt to window
 
     // SetTextColor(hdcMemDC, TRANSPARENT_COLOR);
-    SetDCPenColor(hdcMemDC, RGB(255, 0, 0));
+    // SetDCPenColor(hdcMemDC, RGB(255, 0, 0));
+    SetDCPenColor(hdcMemDC, TRANSPARENT_COLOR);
     SetDCBrushColor(hdcMemDC, TRANSPARENT_COLOR);
 
     for (int i = 0; i < NUMBER_OF_BUBBLES; i++) {
@@ -396,11 +403,6 @@ void DrawBubbles()
 
         // if (i == 0)
         //     printf("X: %f, Y: %f, R: %f \n", bubbles[i].x, bubbles[i].y, bubbles[i].r);
-    }
-
-    // Bit block transfer onto window dc
-    if(!BitBlt(hMyDC, 0, 0, myWidth, myHeight, hdcMemDC, 0, 0, SRCCOPY)) {
-        printf("Oh no");
     }
 }
 
@@ -428,7 +430,7 @@ DWORD WINAPI CheckUserInteractionLoop(LPVOID lpParam)
         // disable bubbles if window is not minimized and user action recently
         if (!IsIconic(hwnd) && GetTickCount() - plii.dwTime < 250)
         {
-            ShowWindow(hwnd, SW_MINIMIZE);
+            // ShowWindow(hwnd, SW_MINIMIZE);
         } else if (IsIconic(hwnd) && GetTickCount() - plii.dwTime > TIME_TILL_IDLE) {
             ShowWindow(hwnd, SW_MAXIMIZE);
         }
