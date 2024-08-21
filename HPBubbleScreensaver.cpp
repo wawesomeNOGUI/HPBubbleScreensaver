@@ -4,6 +4,7 @@
 
 #include <windows.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include <time.h>
 
@@ -19,7 +20,7 @@ HDC hMyDC;
 
 //=======================Bubble Stuff=====================
 const int NUMBER_OF_BUBBLES = 10;
-const int BUBBLE_RADIUS = 50;
+const int BUBBLE_RADIUS = 120;
 
 struct BUBBLE {
     float x;
@@ -134,6 +135,9 @@ int main()
     // begin with the window minimized
     ShowWindow(hwnd, SW_MINIMIZE);
 
+    // initialize bubbles
+    initializeBubbles();
+
     // Run the message and update loop.
     // https://learn.microsoft.com/en-us/windows/win32/learnwin32/window-messages
     MSG msg = { };
@@ -220,7 +224,14 @@ void initializeBubbles()
 {
     for (int i = 0; i < NUMBER_OF_BUBBLES; i++)
     {
+        bubbles[i].x = myWidth/2 + rand() % 500;
+        bubbles[i].y = myHeight/2 + rand() % 500;
         bubbles[i].r = BUBBLE_RADIUS;
+        bubbles[i].mass = 10;
+        bubbles[i].xVel = 2;
+        bubbles[i].yVel = 0;
+
+            // printf("X: %f, Y: %f, R: %f", bubbles[i].xVel, bubbles[i].y, bubbles[i].r);
     }
 }
 
@@ -310,25 +321,37 @@ void bubbleUpdate(BUBBLE* b) {
 
 void DrawBubbles()
 {
-    SetTextColor(hMyDC, TRANSPARENT_COLOR);
+    // SetTextColor(hMyDC, TRANSPARENT_COLOR);
+    SetDCPenColor(hMyDC, GRAY_BRUSH);
+    SetDCBrushColor(hMyDC, TRANSPARENT_COLOR);
     SetBkColor(hMyDC, BACKGROUND_COLOR);
 
     for (int i = 0; i < NUMBER_OF_BUBBLES; i++) {
         bubbleUpdate(&bubbles[i]);
+        Ellipse(
+            hMyDC,
+            bubbles[i].x - bubbles[i].r, // top left bounding corner x
+            bubbles[i].y - bubbles[i].r, // top left bounding corner y
+            bubbles[i].x + bubbles[i].r, // bottom right bounding corner x
+            bubbles[i].y + bubbles[i].r // bottom right bounding corner y
+        );
+
+        // if (i == 0)
+        //     printf("X: %f, Y: %f, R: %f \n", bubbles[i].x, bubbles[i].y, bubbles[i].r);
     }
 
-    int i = 0;
-    wchar_t myChar = 'H';
+    // int i = 0;
+    // wchar_t myChar = 'H';
 
-    for(int y = 0; y < myHeight; y += 13) {
-        for(int x = 0; x < myWidth; x += 12){
-            // printable ascii range is 32 (space) through 126 (~)
-            // myChar = (int) rand() % (126 - 32 + 1) + 32;
-            // myChar = charString[(int) rand() % (CHARS)];
-            // myChar = charString[i++ % (CHARS)]; // print character string in a row
-            ExtTextOutW(hMyDC, x, y, ETO_OPAQUE, NULL, &myChar, 1, NULL);
-        }
-    }
+    // for(int y = 0; y < myHeight; y += 13) {
+    //     for(int x = 0; x < myWidth; x += 12){
+    //         // printable ascii range is 32 (space) through 126 (~)
+    //         // myChar = (int) rand() % (126 - 32 + 1) + 32;
+    //         // myChar = charString[(int) rand() % (CHARS)];
+    //         // myChar = charString[i++ % (CHARS)]; // print character string in a row
+    //         ExtTextOutW(hMyDC, x, y, ETO_OPAQUE, NULL, &myChar, 1, NULL);
+    //     }
+    // }
 }
 
 // used for checking if user presses bound key to exit program
