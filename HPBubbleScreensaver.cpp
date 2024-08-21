@@ -10,13 +10,14 @@
 
 const COLORREF TRANSPARENT_COLOR = RGB(0, 0, 0);
 const COLORREF BACKGROUND_COLOR = RGB(1, 1, 1);
-const int TIME_TILL_IDLE = 10000; // time in milliseconds
+const int TIME_TILL_IDLE = 1000; // time in milliseconds
 
 HANDLE idleCheckHandle;
 
 int myWidth, myHeight;
 int monitorWidth, monitorHeight;
 HDC hMyDC, hdcMemDC;
+HBITMAP hMyBmp;
 
 //=======================Bubble Stuff=====================
 const int NUMBER_OF_BUBBLES = 10;
@@ -89,9 +90,6 @@ int main()
 
     HWND hwnd = CreateFullscreenWindow(hmon, &hInstance, &info);
 
-    // begin with the window minimized
-    ShowWindow(hwnd, SW_MINIMIZE);
-
     // record this window's width and height
     // in my testing the windows width was sometimes different
     // than the monitor resolution even when window was fullscreen 
@@ -100,6 +98,8 @@ int main()
     GetClientRect(hwnd, &rect);
     myWidth = rect.right - rect.left;
     myHeight = rect.bottom - rect.top;
+    
+    printf("myWidth: %d myHeight: %d\n", myWidth, myHeight);
 
     // set window to be clickable through
     // https://stackoverflow.com/questions/13069717/letting-the-mouse-pass-through-windows-c
@@ -125,6 +125,14 @@ int main()
 
     // Create a compatible DC, which is used as a drawing buffer and then BitBlt to the window DC.
     hdcMemDC = CreateCompatibleDC(hMyDC);
+
+    // "Before an application can use a memory DC for drawing operations, 
+    // it must select a bitmap of the correct width and height into the DC. 
+    // To select a bitmap into a DC, use the CreateCompatibleBitmap function, 
+    // specifying the height, width, and color organization required."
+    // https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createcompatibledc
+    hMyBmp = CreateCompatibleBitmap(hMyDC, myWidth, myHeight);
+    SelectObject(hdcMemDC, hMyBmp);
     
     // Start keypress/user interaction control thread for getting out of screensaver mode
     idleCheckHandle = CreateThread(
@@ -135,6 +143,9 @@ int main()
         0,      // thread runs immediately after creation
         NULL    // pointer to variable to receive thread id
     );
+    
+    // begin with the window minimized
+    ShowWindow(hwnd, SW_MINIMIZE);
 
     // initialize bubbles
     initializeBubbles();
@@ -198,7 +209,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
-            hMyDC = BeginPaint(hwnd, &ps); 
+            BeginPaint(hwnd, &ps); 
 
             DrawBubbles();
 
@@ -320,23 +331,22 @@ void DrawBubbles()
 {
     // draw to buffer DC and when done bit blt to window
 
-     // fill background
+    // Select DC_PEN so you can change the color of the pen with
+    // COLORREF SetDCPenColor(HDC hdc, COLORREF color)
+    SelectObject(hdcMemDC, GetStockObject(DC_PEN));
+
+    // Select DC_BRUSH so you can change the brush color from the 
+    // default WHITE_BRUSH to any other color
+    SelectObject(hdcMemDC, GetStockObject(DC_BRUSH));
+
+    // fill background
     // SetBkColor(hdcMemDC, BACKGROUND_COLOR);
-    // Rectangle(hdcMemDC, 0, 0, myWidth, myHeight);
-
-    //    Select DC_PEN so you can change the color of the pen with
-    //    COLORREF SetDCPenColor(HDC hdc, COLORREF color)
-        SelectObject(hdcMemDC, GetStockObject(DC_PEN));
-
-    //    Select DC_BRUSH so you can change the brush color from the 
-    //    default WHITE_BRUSH to any other color
-        SelectObject(hdcMemDC, GetStockObject(DC_BRUSH));
+    SetDCBrushColor(hdcMemDC, BACKGROUND_COLOR);
+    Rectangle(hdcMemDC, 0, 0, myWidth, myHeight);
 
     // SetTextColor(hdcMemDC, TRANSPARENT_COLOR);
     SetDCPenColor(hdcMemDC, GRAY_BRUSH);
     SetDCBrushColor(hdcMemDC, TRANSPARENT_COLOR);
-
-    // SelectObject(hdcMemDC, GetStockObject(TRANSPARENT_COLOR)); 
 
     for (int i = 0; i < NUMBER_OF_BUBBLES; i++) {
         bubbleUpdate(&bubbles[i]);
@@ -353,7 +363,9 @@ void DrawBubbles()
     }
 
     // Bit block transfer onto window dc
-    BitBlt(hMyDC, 0, 0, myWidth, myHeight, hdcMemDC, 0, 0, SRCCOPY);
+    if(!BitBlt(hMyDC, 0, 0, myWidth, myHeight, hdcMemDC, 0, 0, SRCCOPY)) {
+        printf("Oh no");
+    }
 }
 
 // used for checking if user presses bound key to exit program
