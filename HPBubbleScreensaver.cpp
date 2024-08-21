@@ -228,7 +228,7 @@ void initializeBubbles()
         bubbles[i].y = myHeight/2 + rand() % 500;
         bubbles[i].r = BUBBLE_RADIUS;
         bubbles[i].mass = 10;
-        bubbles[i].xVel = 2;
+        bubbles[i].xVel = 0.5;
         bubbles[i].yVel = 0;
 
             // printf("X: %f, Y: %f, R: %f", bubbles[i].xVel, bubbles[i].y, bubbles[i].r);
@@ -321,10 +321,20 @@ void bubbleUpdate(BUBBLE* b) {
 
 void DrawBubbles()
 {
+    //    Select DC_PEN so you can change the color of the pen with
+    //    COLORREF SetDCPenColor(HDC hdc, COLORREF color)
+        SelectObject(hMyDC, GetStockObject(DC_PEN));
+
+    //    Select DC_BRUSH so you can change the brush color from the 
+    //    default WHITE_BRUSH to any other color
+        SelectObject(hMyDC, GetStockObject(DC_BRUSH));
+
     // SetTextColor(hMyDC, TRANSPARENT_COLOR);
     SetDCPenColor(hMyDC, GRAY_BRUSH);
     SetDCBrushColor(hMyDC, TRANSPARENT_COLOR);
     SetBkColor(hMyDC, BACKGROUND_COLOR);
+
+    // SelectObject(hMyDC, GetStockObject(TRANSPARENT_COLOR)); 
 
     for (int i = 0; i < NUMBER_OF_BUBBLES; i++) {
         bubbleUpdate(&bubbles[i]);
