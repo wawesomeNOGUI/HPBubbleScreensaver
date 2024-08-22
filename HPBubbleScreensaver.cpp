@@ -237,7 +237,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
             // draw to hdcMemDC buffer device context
             DrawBackground();
-            // DrawBubbles();
+            DrawBubbles();
 
             // Bit block transfer onto window dc
             if(!BitBlt(hMyDC, 0, 0, myWidth, myHeight, hdcMemDC, 0, 0, SRCCOPY)) {
@@ -430,7 +430,7 @@ DWORD WINAPI CheckUserInteractionLoop(LPVOID lpParam)
         // disable bubbles if window is not minimized and user action recently
         if (!IsIconic(hwnd) && GetTickCount() - plii.dwTime < 250)
         {
-            // ShowWindow(hwnd, SW_MINIMIZE);
+            ShowWindow(hwnd, SW_MINIMIZE);
         } else if (IsIconic(hwnd) && GetTickCount() - plii.dwTime > TIME_TILL_IDLE) {
             ShowWindow(hwnd, SW_MAXIMIZE);
         }
