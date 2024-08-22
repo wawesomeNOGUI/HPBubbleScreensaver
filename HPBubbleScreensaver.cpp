@@ -10,7 +10,7 @@
 
 const COLORREF TRANSPARENT_COLOR = RGB(0, 0, 0);
 const COLORREF BACKGROUND_COLOR = RGB(1, 1, 1);
-const int TIME_TILL_IDLE = 2000; // time in milliseconds
+const int TIME_TILL_IDLE = 10000; // time in milliseconds
 
 HANDLE idleCheckHandle;
 
@@ -365,7 +365,7 @@ void DrawBackground()
     // fill background
     // SetBkColor(hdcMemDC, BACKGROUND_COLOR);
     SetDCPenColor(hdcMemDC, BACKGROUND_COLOR);
-    SetDCBrushColor(hdcMemDC, RGB(100, 100, 100));
+    SetDCBrushColor(hdcMemDC, RGB(25, 25, 25));
     Rectangle(hdcMemDC, 0, 0, myWidth, myHeight);
 
     // The source DC is the whole screen, and the destination DC is buffer dc (hdcMemDC).
